@@ -29,7 +29,27 @@ struct Vec {
         void **items;
 };
 
-static inline long size_of_file(const char *path) {
+// File IO operations
+long size_of_file(const char *path);
+int read_file_to_buffer(const char *path, void *__restrict__ buf,
+                        size_t file_size);
+int write_buffer_to_file(const char *path, void *__restrict__ buf,
+                         size_t buf_size);
+int append_buffer_to_file(const char *path, void *__restrict__ buf,
+                          size_t buf_size);
+
+// Dynamic Data structures
+struct Vec *init_vec(void);
+void vec_insert(struct Vec *__restrict__ vec, void *item);
+int realloc_vec(struct Vec *__restrict__ vec);
+void drop_vec(struct Vec *a);
+
+// Quality of life
+void exit_with_error(const char *message);
+
+#ifdef JUAN_IMPLEMENTATION
+
+long size_of_file(const char *path) {
         FILE *f = fopen(path, "r");
         if (!f) {
                 return -1;
@@ -46,21 +66,20 @@ static inline long size_of_file(const char *path) {
         return size;
 }
 
-static inline int read_file_to_buffer(const char *path, void *__restrict__ buf,
-                                      size_t file_size) {
+int read_file_to_buffer(const char *path, void *__restrict__ buf,
+                        size_t file_size) {
         FILE *f = fopen(path, "r");
         if (!f) {
                 return -1;
         }
 
-        size_t read = fread(buf, file_size, 1, f);
+        size_t read = fread(buf, 1, file_size, f);
         fclose(f);
         return read == file_size ? read : -1;
 }
 
-static inline int append_buffer_to_file(const char *path,
-                                        void *__restrict__ buf,
-                                        size_t buf_size) {
+int append_buffer_to_file(const char *path, void *__restrict__ buf,
+                          size_t buf_size) {
 
         FILE *f = fopen(path, "a");
         if (!f) {
@@ -72,8 +91,8 @@ static inline int append_buffer_to_file(const char *path,
         return written;
 }
 
-static inline int write_buffer_to_file(const char *path, void *__restrict__ buf,
-                                       size_t buf_size) {
+int write_buffer_to_file(const char *path, void *__restrict__ buf,
+                         size_t buf_size) {
 
         FILE *f = fopen(path, "w");
         if (!f) {
@@ -85,7 +104,7 @@ static inline int write_buffer_to_file(const char *path, void *__restrict__ buf,
         return written;
 }
 
-static inline struct Vec *init_vec(void) {
+struct Vec *init_vec(void) {
         void **items = (void **)malloc(INIT_VEC_CAP * sizeof(void *));
         if (!items) {
                 return NULL;
@@ -104,7 +123,7 @@ static inline struct Vec *init_vec(void) {
         return v;
 }
 
-static inline void drop_vec(struct Vec *a) {
+void drop_vec(struct Vec *a) {
         free(a->items);
         a->len = 0;
         a->cap = 0;
@@ -113,7 +132,7 @@ static inline void drop_vec(struct Vec *a) {
         return;
 }
 
-static inline int realloc_vec(struct Vec *__restrict__ vec) {
+int realloc_vec(struct Vec *__restrict__ vec) {
         size_t cap = vec->cap * 2;
         void *new_ = reallocarray(vec->items, cap, sizeof(vec->items[0]));
         if (!new_) {
@@ -126,7 +145,7 @@ static inline int realloc_vec(struct Vec *__restrict__ vec) {
         return 0;
 }
 
-static inline void vec_insert(struct Vec *__restrict__ vec, void *item) {
+void vec_insert(struct Vec *__restrict__ vec, void *item) {
         if (!vec) {
                 vec = init_vec();
         }
@@ -139,5 +158,13 @@ static inline void vec_insert(struct Vec *__restrict__ vec, void *item) {
         vec->items[vec->len++] = item;
         return;
 }
+
+void exit_with_error(const char *message) {
+        perror(message);
+        exit(1);
+        return;
+}
+
+#endif
 
 #endif
