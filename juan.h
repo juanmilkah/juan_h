@@ -22,15 +22,15 @@
 
 // File IO operations
 // Return 0 on success, -1 on failure
-int create_file_if_not_exists(const char *path);
-int file_exists(const char *path);   // 0 if not exists, 1 if exists, -1 error
-long size_of_file(const char *path); // -1 on error
-int read_file_to_buffer(const char *path, void *buf,
-                        size_t file_size); // 0 success, -1 error
-int write_buffer_to_file(const char *path, void *buf,
-                         size_t buf_size); // 0 success, -1 error
-int append_buffer_to_file(const char *path, void *buf,
-                          size_t buf_size); // 0 success, -1 error
+static int create_file_if_not_exists(const char *path);
+static int file_exists(const char *path); // 0 if not exists, 1 if exists, -1 error
+static long filesize(const char *path); // -1 on error
+static int file_to_buf(const char *path, void *buf,
+    size_t file_size); // 0 success, -1 error
+static int buf_to_file(const char *path, void *buf,
+    size_t buf_size); // 0 success, -1 error
+static int buf_to_file_append(const char *path, void *buf,
+    size_t buf_size); // 0 success, -1 error
 
 // Dynamic Data structures
 struct Vec {
@@ -39,13 +39,13 @@ struct Vec {
         void **items;
 };
 
-struct Vec *init_vec(void);
-struct Vec *init_vec_with_cap(unsigned int cap);
-int vec_insert_at(struct Vec *vec, void *item,
-                  size_t index);           // 0 success, -1 error
-int vec_push(struct Vec *vec, void *item); // 0 success, -1 error
-int realloc_vec(struct Vec *vec);          // 0 success, -1 error
-void drop_vec(struct Vec *vec);
+static struct Vec *init_vec(void);
+static struct Vec *init_vec_with_cap(unsigned int cap);
+static int vec_insert_at(struct Vec *vec, void *item,
+    size_t index); // 0 success, -1 error
+static int vec_push(struct Vec *vec, void *item); // 0 success, -1 error
+static int realloc_vec(struct Vec *vec); // 0 success, -1 error
+static void drop_vec(struct Vec *vec);
 
 // Logging levels
 enum Level {
@@ -55,22 +55,21 @@ enum Level {
         J_DEBUG,
 };
 
-const char *log_level_to_string(enum Level l);
-void exit_with_error(const char *message);
-void J_log(enum Level l, const char *message);
+static const char *log_level_to_string(enum Level l);
+static void die(const char *message);
+static void J_log(enum Level l, const char *message);
 
 // String utilities
-void split_newline_to_vec(char *s, struct Vec *v);
-void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter);
-
-#ifdef JUAN_IMPLEMENTATION
+static void split_newline_to_vec(char *s, struct Vec *v);
+static void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter);
 
 #include "juan.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-long size_of_file(const char *path) {
+long filesize(const char *path)
+{
         FILE *f = fopen(path, "r");
         if (!f) {
                 return -1;
@@ -89,7 +88,8 @@ long size_of_file(const char *path) {
         return size;
 }
 
-int read_file_to_buffer(const char *path, void *buf, size_t file_size) {
+int file_to_buf(const char *path, void *buf, size_t file_size)
+{
         FILE *f = fopen(path, "r");
         if (!f) {
                 return -1;
@@ -100,7 +100,8 @@ int read_file_to_buffer(const char *path, void *buf, size_t file_size) {
         return (read == file_size) ? 0 : -1;
 }
 
-int write_buffer_to_file(const char *path, void *buf, size_t buf_size) {
+int buf_to_file(const char *path, void *buf, size_t buf_size)
+{
         FILE *f = fopen(path, "w");
         if (!f) {
                 return -1;
@@ -111,7 +112,8 @@ int write_buffer_to_file(const char *path, void *buf, size_t buf_size) {
         return (written == buf_size) ? 0 : -1;
 }
 
-int append_buffer_to_file(const char *path, void *buf, size_t buf_size) {
+int buf_to_file_append(const char *path, void *buf, size_t buf_size)
+{
         FILE *f = fopen(path, "a");
         if (!f) {
                 return -1;
@@ -122,7 +124,8 @@ int append_buffer_to_file(const char *path, void *buf, size_t buf_size) {
         return (written == buf_size) ? 0 : -1;
 }
 
-int create_file_if_not_exists(const char *path) {
+int create_file_if_not_exists(const char *path)
+{
         FILE *f = fopen(path, "r");
         if (f) {
                 fclose(f);
@@ -138,7 +141,8 @@ int create_file_if_not_exists(const char *path) {
         return 0; // File created successfully
 }
 
-int file_exists(const char *path) {
+int file_exists(const char *path)
+{
         FILE *f = fopen(path, "r");
         if (f) {
                 fclose(f);
@@ -154,15 +158,16 @@ int file_exists(const char *path) {
 
 struct Vec *init_vec(void) { return init_vec_with_cap(INIT_VEC_CAP); }
 
-struct Vec *init_vec_with_cap(unsigned int cap) {
+struct Vec *init_vec_with_cap(unsigned int cap)
+{
         if (cap == 0) {
                 cap = INIT_VEC_CAP;
         }
-        void **items = malloc(cap * sizeof(void *));
+        void **items = (void **)malloc(cap * sizeof(void *));
         if (!items)
                 return NULL;
 
-        struct Vec *v = malloc(sizeof(struct Vec));
+        struct Vec *v = (struct Vec *)malloc(sizeof(struct Vec));
         if (!v) {
                 free(items);
                 return NULL;
@@ -174,9 +179,10 @@ struct Vec *init_vec_with_cap(unsigned int cap) {
         return v;
 }
 
-int realloc_vec(struct Vec *vec) {
+int realloc_vec(struct Vec *vec)
+{
         size_t new_cap = vec->cap * 2;
-        void **new_items = reallocarray(vec->items, new_cap, sizeof(void *));
+        void **new_items = (void **)reallocarray(vec->items, new_cap, sizeof(void *));
         if (!new_items) {
                 return -1;
         }
@@ -185,7 +191,8 @@ int realloc_vec(struct Vec *vec) {
         return 0;
 }
 
-int vec_insert_at(struct Vec *vec, void *item, size_t index) {
+int vec_insert_at(struct Vec *vec, void *item, size_t index)
+{
         if (!vec)
                 return -1;
 
@@ -210,7 +217,8 @@ int vec_insert_at(struct Vec *vec, void *item, size_t index) {
         return 0;
 }
 
-int vec_push(struct Vec *vec, void *item) {
+int vec_push(struct Vec *vec, void *item)
+{
         int result = vec_insert_at(vec, item, vec->len);
         if (!result) {
                 vec->len++;
@@ -219,7 +227,8 @@ int vec_push(struct Vec *vec, void *item) {
         return result;
 }
 
-void drop_vec(struct Vec *vec) {
+void drop_vec(struct Vec *vec)
+{
         if (!vec)
                 return;
         for (size_t i = 0; i < vec->len; i++) {
@@ -229,7 +238,8 @@ void drop_vec(struct Vec *vec) {
         free(vec);
 }
 
-const char *log_level_to_string(enum Level l) {
+const char *log_level_to_string(enum Level l)
+{
         switch (l) {
         case J_ERROR:
                 return "ERROR";
@@ -244,25 +254,27 @@ const char *log_level_to_string(enum Level l) {
         }
 }
 
-void J_log(enum Level l, const char *message) {
+void J_log(enum Level l, const char *message)
+{
         const char *level_str = log_level_to_string(l);
         fprintf(stderr, "%s: %s\n", level_str, message);
 }
 
-void exit_with_error(const char *message) {
+void die(const char *message)
+{
         perror(message);
         exit(EXIT_FAILURE);
 }
 
-void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter) {
+void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter)
+{
         if (!s || !v)
                 return;
         char *start = s;
         while (*start) {
                 char *delim_pos = strchr(start, delimiter);
-                size_t len =
-                    delim_pos ? (size_t)(delim_pos - start) : strlen(start);
-                char *part = malloc(len + 1);
+                size_t len = delim_pos ? (size_t)(delim_pos - start) : strlen(start);
+                char *part = (char *)malloc(len + 1);
                 if (!part)
                         return;
                 memcpy(part, start, len);
@@ -274,9 +286,9 @@ void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter) {
         }
 }
 
-void split_newline_to_vec(char *s, struct Vec *v) {
+void split_newline_to_vec(char *s, struct Vec *v)
+{
         split_at_delimiter_to_vec(s, v, '\n');
 }
 
-#endif
 #endif
