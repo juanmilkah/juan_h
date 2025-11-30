@@ -16,6 +16,13 @@
 
 #include <errno.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifndef UNREACHABLE
+#define UNREACHABLE(msg) assert(0 && msg)
+#endif
 
 // Initial capacity for Vec dynamic array
 #define INIT_VEC_CAP 64
@@ -62,11 +69,6 @@ static void J_log(enum Level l, const char *message);
 // String utilities
 static void split_newline_to_vec(char *s, struct Vec *v);
 static void split_at_delimiter_to_vec(char *s, struct Vec *v, char delimiter);
-
-#include "juan.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 long filesize(const char *path)
 {
